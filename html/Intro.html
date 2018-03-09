@@ -1,0 +1,30 @@
+<h1>Intro to ChemSpider API</h1>
+
+<p>Welcome to web of <a href="">ChemSpider’s web services API</a>.  The API taps into over 600 chemistry related database sources for synthesizing all your chemistry related applications.  You can use both SOAP, HTTP query, and REST (immature) protocols to search by and access information. The API is mainly split into four main categories:</p>
+
+<ul>
+    <li><a href="http://www.chemspider.com/Search.asmx">General Search API</a></li>
+    <ul>
+        <li>Search by Name, SMILES, InChI</li>
+        <li>Search by chemical elements</li>
+        <li>Search by predicted properties</li>
+        <li>Conduct compound similarity</li>
+        <li>Find by or view structures</li>
+    </ul>
+    <li><a href="http://www.chemspider.com/MassSpecAPI.asmx">Mass Spectrometry</a></li>
+    <ul>
+        <li>Search by chemical formula</li>
+        <li>Search by molecular masses</li>
+    </ul>
+    <li><a href="http://www.chemspider.com/Spectra.asmx">Spectra Libray</a></li>
+    <ul>
+        <li>Get Open Access spectra</li>
+    </ul>
+    <li><a href="http://www.chemspider.com/InChI.asmx">InChI Services</a></li>
+    <ul>
+        <li>Structure<>SMILES conversion</li>
+        <li>Structure<>InCHi</li>
+    </ul>
+</ul>
+
+<p>ChemSpider's web API is elastic enough that it provides both synchronous and asynchronous functions, whereby one can check the status of their search compilation before sending, or send as soon as possible.  Given it's breadth, this How-To will dabble through  both types of functions, the four chemistry categories, as well as the REST and SOAP methods using implementations in JavaScript.  Before thinking about flying through this web, try getting registered with their web security token as shown on the next page, or you might just get stuck, like a fly.  If you do consider building a full-fledged app, give them a talk about allowing cross-origin access and subscription services.</p>

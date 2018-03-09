@@ -1,0 +1,29 @@
+<h1>Getting Started</h1>
+<p>Many of ChemSpider's SOAP methods require security tokens while many of their REST methods don't.  Just to be safe, grab a token from their <a href="http://www.chemspider.com/help-create-a-chemspider-account.aspx">Registration Page</a>by first getting an RSC ID (Royal Society of Chemistry), merging a ChemSpider account, and extracting the security token from the <a href="http://www.chemspider.com/UserProfile.aspx">Profile Link</a> they mention on page zero.  It may be difficult to get to the Profile page from your actual account, counterintuitively; the link Profile Page link may keep you sane.</p>
+
+<figure>
+    <figcaption>Registration Page for the Visual Lushes </figcaption>
+    <img src="/~kirchnch/pics/Registration_Page.png"></a>
+</figure>
+
+<figure>
+    <figcaption>Grinch stole Profile Link under Account?</figcaption>
+    <img src="/~kirchnch/pics/NoProfileLink.png"></a>
+</figure>
+
+<figure>
+    <figcaption>Profile Page Saves the Day</figcaption>
+    <img src="/~kirchnch/pics/ProfileLink.png"></a>
+</figure>
+
+<p>Of course, before you start casting spells at the ChemSpider, Cross-Origin Resource Sharing prevents wizards from mixing potions using connections from different internet domains.  If you are considering a Subscriber Service for your mighty guild of applications, consider giving the good old guys at the Royal Chemical Society a call to get cross sharing access.  For testing purposes, making connections from your local server works fine, granted you have something like XMLHttpRequest installed server-side when using javascript.  While XMLHttpRequest  usually comes with browsers so that it's connections can be rejected by its own CORS anti-browsing function, XMLHttpRequest usually doesn't come with server's where it can run freely.  It's quite ironic really, or i've had one too many potions today. </p>
+
+<p>For those inclined for Node.JS, it behooves you to install XMLHttpRequest through NPM (Node Package Module):</p>
+
+<code>npm install xmlhttprequest</code>
+
+<p>Then later, after you forgot what you just installed, you can imbed XMLHttpRequest in your infamous script:</p>
+
+<pre><code>var XMLHttpRequest = require('xmlhttprequest').XMLHttpRequest;
+var request = new XMLHttpRequest();
+</code></pre>

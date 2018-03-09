@@ -1,0 +1,16 @@
+{
+  "name": "how-to",
+  "version": "1.0.0",
+  "description": "how-to on api",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Chris Kirchner",
+  "license": "ISC",
+  "dependencies": {
+    "xmldom": "^0.1.22",
+    "xmlhttprequest": "^1.8.0",
+    "xpath": "0.0.22"
+  }
+}

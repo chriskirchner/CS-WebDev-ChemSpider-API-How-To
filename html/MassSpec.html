@@ -1,0 +1,48 @@
+<p>In this section, we will talk about ChemSpider's Mass Spectrometry API, providing helpful search functions for mass determination like searching for masses by the chemical formula (i.e., how many elements of each type there are in a molecule), or searching for molecules by mass. To continue the tradition of mixing stuff up in this tutorial, from using HTTP GET with synchronous operations to using REST with asynchronous operations, we'll try the SOAP protocol with HTTP POST.  The SOAP protocol uses SOAP special XML as the payload, holding the API function and options.</p>
+
+<p>If your a software developer tasked with putting together a Mass Spec application without having a clue of what it is, spectrometry is essentially based on obliterating a compound into many different fragments, then using the masses of those fragment to identify the compound obliterated.  This obliteration is like going "<a href="https://en.wikipedia.org/wiki/Office_Space">Office-Space</a> on"(i.e., smashing up)  a printer to find out the identity of the printer using it's broken parts.  If you're lucky, someone has already destroyed the unknown compound you are trying to identify, so using a mass database can identify your compound like a fingerprint.  If your unlucky, the fragments can still be helpful like putting together the broken jigsaw puzzle.  The figure below is a mass spectrum of ethanol, complimentary of <a href="http://simulab.ltt.com.au/5/Laboratory/StudyNotes/snTheInterpMasSpect.htm">SimuLab</a> (I hope they don't sue), showing the mass fragment peaks of ethanol and the chemical formula, CH3CH2OH.  You'd think, being a Mass Spec API, there would an operation for retrieving mass spectrums, or using masses to identify the compound as a fingerprint, but no, it's not that helpful.</p>
+
+<figure>
+    <figcaption>Mass Spectrum of Ethanol</figcaption>
+    <img src="/~kirchnch/pics/EthanolMassSpec.png">
+</figure>
+
+<p>For the cross-referential, the first thing you might want to do before imploring for mass data is a get list of data sources for filtering your data, and to see what's out there.  Below is the modified CSRequest function for working with SOAP 1.2.  Since all information is contained in the XML payload, we'll exclude the use of the JSON argument for simplicity.</p>
+
+<pre><code>function CSRequest(query){
+    var host = 'http://www.chemspider.com';
+    var resource = '/MassSpecAPI.asmx';
+    var request = new XMLHttpRequest();
+    request.open('POST', host+resource, false);
+    request.setRequestHeader('Content-Type', 'application/soap+xml');
+    request.send(query);
+    console.log(request.responseText);
+    return request.responseText;
+}
+</code></pre>
+
+<p>And here is the XML query calling the GetDatabases operation: </p>
+
+<pre><code>var databases = '<?xml version="1.0" encoding="utf-8"?>\
+<soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">\
+    <soap12:Body>\
+        <GetDatabases xmlns="http://www.chemspider.com/" />\
+    </soap12:Body>\
+</soap12:Envelope>';
+var sources = CSRequest(databases);
+</code></pre>
+
+<p>You can view the result of the GetDatabases operation <a href=""</p>
+
+<pre><code>var formula =
+'<?xml version="1.0" encoding="utf-8"?> \
+<soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"> \
+    <soap12:Body> \
+        <SearchByFormulaAsync xmlns="http://www.chemspider.com/"> \
+            <formula>CH3CH2OH</formula> \
+            <token>'+token+'</token> \
+        </SearchByFormulaAsync> \
+    </soap12:Body> \
+</soap12:Envelope>';
+var rid = CSRequest(formula);
+</code></pre>
