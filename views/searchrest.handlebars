@@ -1,0 +1,96 @@
+<h1>Compound Search using REST</h1>
+<h3>...their Sleepy API</h3>
+
+<p>As hinted in the introduction, most of ChemSpider APIs has sibling synchronous and asynchronous functions, like SimpleSearch and AsyncSimpleSearch of their SOAP/HTTP Search API.  While the SimpleSearch spits out a list of CSIDs (ChemSpider IDs) directly, the AsyncSimpleSearch dribbles out the CSIDs indirectly through a later function, GetAsyncSearchResult, using an intermediate identifier to keep track of the search compilation status on the server, known as the RID (Request ID).  The GetAsyncSearchStatus allows the developer to check on the status of a search compilation to prevent grabbing results prematurely with wasted resources (why don't they just give a status message on GetAsynchSearchResult?).  Once the status from GetAsyncSearchStatus indicates a ready state, we can sponge up the "results" with GetAsyncSearchResult.  The resulting CSID from GetAsyncSearchResult can then be used to get other forms of chemical results depending on the function and filters used.  To summarize in pseudo-pictographical form:</p>
+
+<code>Chemical Identifer (e.g., name) --> AsyncSimpleSearch --> RID --> ASyncSearchStatus --> ResultReady? --> ASyncSearchResult --> CSIDs --> Actual Results (e.g., thumbnail)</code><br><br>
+
+<p>In similar fashion, the <a href="http://www.chemspider.com/JSON.ashx">REST portion</a> of the ChemSpider API assumes the asynchronous method without prefixing their methods with 'Async' - not as cool, i know, but we'll get through it.  This section of the tutorial will repeat the SimpleSearch function using HTTP GET, but with the REST protocol and asynchronous operations to retrieve the chemical MOL file.  Like before, we will use a modified version of the CSRequest method for REST with a different resource handler, "/JSON.ashx", instead of "/Search.asmx".  Since the JSON handler obviously returns back JOSN, setting the value of 'Content-Type' header as 'application/json' is redundant, but still available for purists.</p>
+
+<pre><xmp>function CSRequest(query){
+    var host = 'http://www.chemspider.com';
+    var resource = '/JSON.ashx?';
+    var request = new XMLHttpRequest();
+    var q = 'op='+query.operation+'&';
+    for (var k in query.options){
+        q += k +'='+ query.options[k] +'&';
+    }
+    q = q.slice(0,-1);
+    request.open('GET', host+resource+q, false);
+    //request.setRequestHeader('Content-Type', 'application/json');
+    request.send();
+    return request.responseText;
+}
+</xmp></pre>
+
+<p>To build are JSON query object, will we call the 'SimpleSearch' operation (asynchronous now) with a search query of "Ethanol".  Calling CSRequest with the query object returns the RID:</p>
+
+<pre><xmp>var query = {
+    'operation': 'SimpleSearch',
+    'options': {
+        'searchOptions.queryText': 'Ethanol'
+    }
+};
+var rid = CSRequest(query);
+</xmp></pre>
+
+<p>We can now build the status query using the RID (Request ID) we got from SimpleSearch to check the status with GetSearchStatus:</p>
+
+<pre><code>var status = {
+    'operation': 'GetSearchStatus',
+    'options': {
+        'rid': rid
+    }
+};
+var statusCode = JSON.parse(CSRequest(status));
+</code></pre>
+
+<p>Calling the GetSearchStatus with the RID returns a status code (aka ERequestStatus):</p>
+<ul>
+    <li>0: Unknown</li>
+    <li>1: Created</li>
+    <li>2: Scheduled</li>
+    <li>3: Processing</li>
+    <li>4: Suspended</li>
+    <li>5: PartialResultReady</li>
+    <li>6: ResultReady</li>
+    <li>7: Failed</li>
+    <li>8: TooManyRecords</li>
+</ul>
+
+<p>There are several quibbler's issues with status codes, one being the number 7 represents a Failure while 6 represents success.  Isn't 7 God's number?  Use a conditional if you want to check for ready results:</p>
+
+<pre><xmp>if (stat['Status'] == 6){
+    console.log('ResultReady!');
+}
+</xmp></pre>
+
+<p>Once the search request is complete, we can manifest the CSID list by calling the GetSearchResult operation with our RID:</p>
+
+<pre><xmp>var csids = {
+    'operation': 'GetSearchResult',
+    'options': {
+        'rid': rid
+    }
+};
+var csidList = JSON.parse(CSRequest(csids));
+</xmp></pre>
+
+<p>Calling GetSearchResults returns a list of CSIDs in the form of a string.  To convert the string to an actual list data type, simply use <code>JSON.parse()</code>.  As before, searching for "Ethanol" returns two CSIDs, so we know we are on the right track.  Finally, we can get something chemically useful with the CSID.  For instance, calling GetRecordsAsCompounds will get every freaking thing you can imagine about the compound - article references, links to article references, chemical properties, blobs containing spectrographic data (e.g., .jdx files), CIFS (crystallographic information files), MOLs, name variants, more chemical properties from different sources.  You name it and it's in there, so don't try getting all the compound results for 'Ethanol' like I did, or you might crash your computer.  If you think about it, ethanol's probably the most scientifically cited compound in history.  This time we will use a serialization filter, "serFilter", to capture only the name and MOL file of a compound, unless you want to see how long you can stare at an oncoming stream of data without getting epilepsy from your terminal.</p>
+
+<pre><xmp>var compounds = {
+    'operation': 'GetRecordsAsCompounds',
+    'options': {
+        'csids[0]': csidList[0],
+        'csids[1]': csidList[1],
+        'serfilter': 'Compound[CSID|Name|Mol]'
+    }
+};
+var mol = JSON.parse(CSRequest(compounds));
+</xmp></pre>
+
+<p>The response gives a simple JSON object with MOL data - molecular data that can be used to construct the structure of your molecule.  It's simply amazing how much data is needed to put together a simple molecule like ethanol, but there it is.  If your curious about all the other chemical data formats out there, I encourage you to swing by Wikipedia for a <a href="https://en.wikipedia.org/wiki/Chemical_file_format">good reference</a> (the article luckily needs some desperate help from an expert in Computer Science like you!).  If you're also curious about the ethanol results without filtering, try <a href="/ethanol">this</a>(actually, it's just 10MB).</p>
+
+<p>MOL File:</p>
+<pre>[{"Name":"Ethanol","Mol":"\u000d\u000a\u000d\u000a\u000d\u000a  3  2  0  0000  0  0  0  0  0999 V2000\u000d\u000a    2.3010   -0.6673    0.0000 O   0  0  0  0  0  0  0  0  0  0  0\u000d\u000a    1.1505    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0\u000d\u000a    0.0000   -0.6673    0.0000 C   0  0  0  0  0  0  0  0  0  0  0\u000d\u000a  1  2  1  0\u000d\u000a  2  3  1  0\u000d\u000aM  END\u000d\u000a"},{"Name":"Ethanol","Mol":"\u000d\u000a\u000d\u000a\u000d\u000a  3  2  0  0000  0  0  0  0  0999 V2000\u000d\u000a    2.3010   -0.6673    0.0000 O   0  0  0  0  0  0  0  0  0  0  0\u000d\u000a    1.1505    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0\u000d\u000a    0.0000   -0.6673    0.0000 C   0  0  0  0  0  0  0  0  0  0  0\u000d\u000a  1  2  1  0\u000d\u000a  2  3  1  0\u000d\u000aM  END\u000d\u000a"}]
+</pre>

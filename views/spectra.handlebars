@@ -1,0 +1,127 @@
+<h1>Spectra API</h1>
+<h3>...or Spectre API</h3>
+
+<p>The <a href="http://www.chemspider.com/Spectra.asmx">Spectra API</a> is the simplest repertoire to ChemSpider's spider-tiny armada of web services.  From a name like, "Spectra API", one might expect that it actually provides a function for returning chemical spectra: the profile of absorbed or transmitted irradiation bands in the frequency-domain from wave sources such as infrared (IR), ultraviolet (UV), or radio (NMR).  Mass spectra, as described before, is also categorized in this group.  Unfortunately, not only do you not get any function that provides chemical spectra from this API, but you get many functions that pretty much do the same thing - to give you information about the actual spectral information you might want that is somewhere you don't know where to get, sort of.  Being so perturbed by the matter, I checked weather an API of the ChemSpider's API gave any indication of using ChemSpider to get actual spectral information.  The API was <a href="https://github.com/mcs07/ChemSpiPy">ChemSpiPy</a> and the result was a link, "http://www.chemspider.com/FilesHandler.ashx?type=blob&disp=1&id=", where id is the spectral id.  I guess ChemSpider likes to thrive on a web of obfuscation as there is no mention of this in their documentation as far as I can find.  Before getting the spectral ID however, we must get the spectrum we want using the CSID of the compound.</p>
+
+<p>Let's go over the four functions of the Spectra API:</p>
+<ul>
+    <li>GetAllSpectraInfo</li>
+    <li>GetCompoundSpectraInfo</li>
+    <li>GetSpectraInfoArray</li>
+    <li>GetSpectrumInfo</li>
+</ul>
+
+<p>Notice how the functions all have the word "info" in it without straight-up saying "GetSpectrum", or the likes.  Do the functions provide spectrum information, or spectrum information's information?  Now, let's try to have fun with these functions.  To differ from the rest of the protocols we've seen before, like the REST protocol, we're going to top it off with the HTTP POST request format.  POST requests hide the query in the body when encrypting over HTTPS.  Since spectre queries are top-secret, this is what we'll use.  The first function, GetAllSpectraInfo, returns all possible spectra information using only your security token as an argument.  If we were God, we'd probably want this function.  Being mere mortal, we need to take spectra one at a time.</p>
+
+<p>Let's now go over the segments of spectral metadata each operation sends back starting with 'spc_id', or the id of the spectral information, all of which are the same for all Spectra API operations: </p>
+
+<ul>
+    <li>spc_id</li>
+    <li>csid</li>
+    <li>spc_type</li>
+    <li>file_name</li>
+    <li>comments</li>
+    <li>original_url</li>
+    <li>submitted_date</li>
+</ul>
+
+<p>From the "spc_id", we can get the actual spectrum.  Starting with our time-honored CSRequest function, modified this time for Spectra API requests using the 'Spectra.asmx' handler and POST request, we can set our header to accept content in the 'x-www-form-urlencoded' format.  It's like the URL query format, but in the body of the message.</p>
+
+<pre><xmp>function CSRequest(query){
+    var host = 'https://www.chemspider.com';
+    var resource = '/Spectra.asmx/';
+    var request = new XMLHttpRequest();
+    var q = '';
+    for (var i in query.options.ids){
+        q += query.options.id_name+'='+
+            query.options.ids[i] +'&';
+    }
+    q += 'token='+query.options.token;
+    console.log(q);
+    request.open('POST', host+resource+query.operation, false);
+    request.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
+    request.send(q);
+    return request.responseText;
+}
+</xmp></pre>
+
+<p>The GETSpectraInfoArray operation accepts an array of CSIDs, using keys aptly named CSIDs, to give an array of information about various spectral data sets.</p>
+
+<pre><xmp>var spectraInfoArray = {
+    'operation': 'GetSpectraInfoArray',
+    'options': {
+        'id_name':'CSIDs',
+        'csids': [682, 682],
+        'token': '0a4dc397-454a-4eb7-9767-3d63c6722f0c'
+    }
+};
+CSRequest(spectraInfoArray);
+</xmp></pre>
+
+<p>A CSID list of double '682's, mirroring ChemSpider's double results we got back for 'Ethanol' in our original searches, is used in the spectral query above, giving the following linked <a href="/spectrainfo?html=false">Result</a>.  The result contains many data sets for all the various physical spectra chemists cherish.  The next function covered, GetCompoundSpectraInfo, does the exact same thing as GetSpectraInfoArray with the exception that the operation takes a singular argument, CSID.</p>
+
+<pre><xmp>var compoundSpectraInfo = {
+    'operation': 'GetCompoundSpectraInfo',
+    'options': {
+        'id_name': 'csid',
+        'ids': [682],
+        'token': '0a4dc397-454a-4eb7-9767-3d63c6722f0c'
+    }
+};
+CSRequest(compoundSpectraInfo);
+</xmp></pre>
+
+<p>Observe how the <a href="/compoundspectrainfo?html=false">Results</a> of this query are identical to GetSpectralInfoArray.  Moving in straight-order from a function that gets everything, GetAllSpectraInfo, to one that accepts some, GetSpectraInfoArray, to one that accepts one, GetCompoundSpectralInfo, we will introduce the function that accepts part of one, GetSpectrumInfo.  GetSpectrumInfo accepts the id of a single spectrum of a single compound, "spc_id", to give you back the information describing the information that is the spectrum.</p>
+
+<pre><xmp>var spectrumInfo = {
+    'operation': 'GetSpectrumInfo',
+    'options': {
+        'id_name': 'spc_id',
+        'ids': [6723],
+        'token': '0a4dc397-454a-4eb7-9767-3d63c6722f0c'
+    }
+};
+CSRequest(spectrumInfo);
+</xmp></pre>
+
+<p>To reiterate in reverse, and thereby inculcate the matter ad infinitum, the <a href="/spectrainfo?html=false">Result</a> of GetSpectrumInfo is part of the result from GetCompoundSpectraInfo, which is part of the result of GetSpectraInfoArray for multiple compound arguments, which is then part of the supreme manifestation of GetAllSpectraInfo if you don't input every compound known to man into GetSpectraInfoArray, or just known to the database.  Isn't it amazing?  That's it... So what about getting actual spectra?</p>
+
+<p>As mentioned,to get actual spectra, we have to make a GET request using a function that isn't mentioned in the Spectra API.  Based on the URL found from ChemSpiPy's API, we can create our own special XMLHttpRequest.  The resource handler, "FilesHandler.ashx', returns our spectrum request as a 'blob' file type using the spc_id we got from the previous functions.  Let's get the mass spectrum for ethanol:</p>
+
+<pre><xmp>function CSRequest(query){
+    var host = 'https://www.chemspider.com/';
+    var request = new XMLHttpRequest();
+    var q = '';
+    for (var option in query.options){
+        q += option+'='+
+            query.options[option] +'&';
+    }
+    q = q.slice(0,-1);
+    request.open('GET', host+query.resource+'?'+q, false);
+    request.send();
+    return request.responseText;
+}
+var file = require('fs');
+var spc_id = 6722;
+var spectrum = {
+    'resource':'FilesHandler.ashx',
+    'options': {
+        'type': 'blob',
+        'disp': 1,
+        'id': spc_id
+    }
+};
+var jdx = CSRequest(spectrum);
+file.writeFile('mass.jdx',
+    jdx,
+    function(err){
+        if(err){
+            console.log('Oops, someone hide the spetrum!');
+        }
+    }
+);
+</xmp></pre>
+
+<p>The request returns a spectrum for Ethanol in the form of a .jdx file.  You can use this <a href="http://merian.pch.univie.ac.at/~nhaider/cheminf/jdxview.html">JDXView-er</a> to view the spectrum, or just look below:</p>
+
+<img src="/pics/MSofEthanol.PNG">

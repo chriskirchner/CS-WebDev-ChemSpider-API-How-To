@@ -2,15 +2,8 @@
 <project version="4">
   <component name="WebServers">
     <option name="servers">
-      <webServer id="35018409-3bb0-4a37-93af-7578f157290e" name="EC2" url="http://52.10.35.103">
+      <webServer id="d4d90e2f-b557-4585-bd44-9232a92d6fc9" name="EC2" url="http://52.10.35.103">
         <fileTransfer host="52.10.35.103" port="22" privateKey="C:\Users\Xaz\Documents\puttykey.ppk" accessType="SFTP" username="ubuntu" keyPair="true">
-          <advancedOptions>
-            <advancedOptions dataProtectionLevel="Private" />
-          </advancedOptions>
-        </fileTransfer>
-      </webServer>
-      <webServer id="d6dd9770-a09a-4fe5-982f-c64005215fd1" name="Flip" url="http://web.engr.oregonstate.edu/~kirchnch/">
-        <fileTransfer host="flip.engr.oregonstate.edu" port="22" rootFolder="/nfs/stak/students/k/kirchnch/public_html" accessType="SFTP" username="kirchnch">
           <advancedOptions>
             <advancedOptions dataProtectionLevel="Private" />
           </advancedOptions>

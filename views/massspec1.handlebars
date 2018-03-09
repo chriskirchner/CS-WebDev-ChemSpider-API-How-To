@@ -1,0 +1,96 @@
+<h1>Mass Spec API using SOAP</h1>
+<h3>...the First Fragment</h3>
+
+<p>In this section, we'll talk about ChemSpider's Mass Spectrometry API, providing helpful search functions for mass determination like searching for masses by the chemical formula (i.e., how many elements of each type there are in a molecule), or searching for molecules by mass. To continue the tradition of mixing stuff up in this tutorial, from using HTTP GET with synchronous operations to using REST with asynchronous operations, we'll try the SOAP protocol with HTTP POST.  The SOAP protocol uses SOAP special XML as the payload, holding the API function and options.</p>
+
+<p>If your a software developer tasked with putting together a Mass Spec application without having a clue of what it is, spectrometry is essentially based on obliterating a compound into many different fragments, then using the masses of those fragment to identify the compound obliterated.  This obliteration is like going <a href="https://en.wikipedia.org/wiki/Office_Space">office-space</a> on a printer to find out the identity of the printer using it's broken parts.  If you're lucky, someone has already destroyed the unknown compound you are trying to identify, so using a mass database can identify your compound like a fingerprint.  If your unlucky, the fragments can still be helpful like putting together the broken jigsaw puzzle.  The figure below is a mass spectrum of ethanol, complimentary of <a href="http://simulab.ltt.com.au/5/Laboratory/StudyNotes/snTheInterpMasSpect.htm">SimuLab</a> (I hope they don't sue), showing the mass fragment peaks of ethanol and the chemical formula, CH3CH2OH.  You'd think, being a Mass Spec API, there would an operation for retrieving mass spectrums, or using masses to identify the compound as a fingerprint, but no, it's not that helpful.</p>
+
+<figure>
+    <img src="pics/EthanolMassSpectrum.png">
+</figure>
+
+<p>For the cross-referential, the first thing you might want to do before imploring for mass data is a get list of data sources for filtering your data, and to see what's out there.  Below is the modified CSRequest function for working with SOAP 1.2.  For the most part, only the resource handler and SOAP XML payload will be added to the JSON argument.</p>
+
+<pre><xmp>function CSRequest(query){
+    var host = 'http://www.chemspider.com';
+    var request = new XMLHttpRequest();
+    request.open('POST', host+query.resource, false);
+    request.setRequestHeader('Content-Type', 'application/soap+xml');
+    request.send(query.payload);
+    return request.responseText;
+}
+</xmp></pre>
+
+<p>And here is the XML query calling the GetDatabases operation: </p>
+
+<pre><xmp>var database = {};
+databases.resource = '/MassSpecAPI.asmx';
+databases.payload =
+'<?xml version="1.0" encoding="utf-8"?>\
+<soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">\
+    <soap12:Body>\
+        <GetDatabases xmlns="http://www.chemspider.com/" />\
+    </soap12:Body>\
+</soap12:Envelope>';
+var sources = CSRequest(databases);
+</xmp></pre>
+
+<p>You can view the result of the GetDatabases operation <a href="/databases?html=false">here</a>.  It shows over 600 different sources, coming from different sources such as the FDA, Erowid, Cool Pharm, or even scientific articles, "Using small molecules to overcome drug resistance induced by a viral oncogene", which must be one fantastic read.  </p>
+
+<p>Next, we'll take a look at the chemical formula search function, SearchByFormulaAsync.  Sometimes the Async designation is pre-fixed, sometimes post-fixed, but i'm pretty it's just the same asynchronous action going on.  The SOAP XML payload for the search request comprises of the &lt;SearchByFormulaAsync&gt; operation call which wraps the &lt;formula&gt;,  &lt;dbs&gt; (databases), and &lt;token&gt;.  You can request a composite of your search request from multiple databases depending on your preference.  I bet you can't wait to see what result returns when we use the chemical formula, "CH3CH2OH".  If you can wait, try getting nothing from ChemSpider's own "Formula Search Example" query box at their <a href="http://www.chemspider.com/WebServices/WSMassSpecAPIDemo.aspx">MassSpec API Demo</a>.  I'm not sure if they're using the deprecated SearchByFormula function obsoleted by SearchByFormulaAsync. Maybe they don't know you only get an RID from the search query without any actual results, since they don't actually give any results?  Or maybe "demo" actually means demotion, not demonstration?  Impatient yet?</p>
+
+<pre><xmp>
+var db1 = 'Cool Pharma';
+var db2 = 'NIST';
+formula.resource = '/MassSpecAPI.asmx';
+formula.payload = '<?xml version="1.0" encoding="utf-8"?> \
+<soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"> \
+    <soap12:Body> \
+        <SearchByFormulaAsync xmlns="http://www.chemspider.com/"> \
+            <formula>CH3CH2OH</formula> \
+            <dbs>\
+                <string>'+db1+'</string>\
+                <string>'+db2+'</string>\
+            </dbs>\
+            <token>'+token+'</token> \
+        </SearchByFormulaAsync> \
+    </soap12:Body> \
+</soap12:Envelope>';
+var xml = CSRequest(formula);
+</xmp></pre>
+
+<p>You can extract the RID from the XML response using RegEx as done before. The asynchronous chemical search operation is also accompanied by the GetAsyncSearchStatus operation, requiring the use of the "/Search.asmx" resource handler this time:</p>
+
+<pre><xmp>var status = {};
+status.resource = '/Search.asmx';
+status.payload = '<?xml version="1.0" encoding="utf-8"?>\
+<soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">\
+    <soap12:Body>\
+        <GetAsyncSearchStatus xmlns="http://www.chemspider.com/">\
+            <rid>'+rid+'</rid>\
+            <token>'+token+'</token>\
+        </GetAsyncSearchStatus>\
+    </soap12:Body>\
+</soap12:Envelope>'
+var state = CSRequest(status);
+</xmp></pre>
+b
+<p>Lastly, we'll build a query for the SDF (Structural Data File) that corresponds to our chemical formula query using the RID.  SDF is part of the family of chemical formats created by MDL (Molecular Design Limited) Information Systems. It is like a MOL file that holds the chemical table profile, but is intended for structural information that includes multiples records delimited by regale money signs, "$$$$".  Since multiple data sets are built into the format, we can request chemical information straight from the RID, obviating the need for the CSID intermediary used for requesting singular pieces of data.  SDF also carries important chemical property information, such as LogP and Molecular Weight (g/mol).</p>
+
+
+<pre><xmp>
+var sdf = {};
+sdf.payload =
+'<?xml version="1.0" encoding="utf-8"?>\
+<soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">\
+    <soap12:Body>\
+        <GetRecordsSdf xmlns="http://www.chemspider.com/">\
+            <rid>'+rid+'</rid>\
+            <token>'+token+'</token>\
+        </GetRecordsSdf>\
+    </soap12:Body>\
+</soap12:Envelope>';
+var result = CSRequest(sdf);
+</xmp></pre>
+
+<p>You can access the results of the SDF record retrievel <a href="/sdf">here</a>.  The SDF file can be manipulated, parsed, or filtered, complements of the NIH (National Institute of Health) who provides an <a href="http://cactus.nci.nih.gov/SDF_toolkit/">SDF Toolkit</a> for those savvy in Perl. If your you're looking for other chemical information, such as monoisotopic masses or SMILES (Simplified Molecular-Input Line-Entry System), you will need to get the CSID first using the <a href="http://www.chemspider.com/Search.asmx?op=GetAsyncSearchResult">GetAsyncSearchResult</a> function.  SMILES is just another mechanism, using line notation, to describe the structure of a chemical entity with a crazy sounding name so that they could have a really cool abbreviation.  If one had multiples SMILES, would they still have SMILES?</p>

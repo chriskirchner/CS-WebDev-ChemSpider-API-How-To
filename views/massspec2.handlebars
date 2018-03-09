@@ -1,0 +1,67 @@
+<h1>Mass Spec API using SOAP</h1>
+<h3>...the Last Fragment</h3>
+
+<p>The second main part of the ChemSpider's Mass API involves searching for compounds by monoisotopic mass.  Monoisotopic mass is important in Mass Spectrometry since it refers to the exact mass using the unbound, ground-state, rest mass of the most abundant isotope.  One cannot simply use the regular average molar mass of a molecule since this refers to the weighted average of all isotopic masses based on their abundance on Earth.  On a different planet with the exact same gravitational pull, we would have different molecular weights  for different isotopic compositioned soils. Using the monoisotopic mass of a molecule, the mass would not change regardless of planet.  As average molecular weights don't necessarily represent the molecular weight of an actual compound, you won't see the molecular weight detected in a Mass Spectrum.  You will, however, see isotopic masses, with the monoisotopic mass (no, not that kind of mono) used for it's abundance.</p>
+
+<p>Knowing a little more about chemistry as you did before, or not, let's quickly get splattered with the code needed to pull compound matches from the masses.  Using SOAP POSTs, we'll wrap the request to SearchByMassArrayAsyncOrdered in a function, adding search arguments and filters:</p>
+
+<pre><xmp>function massesToRID(masses){
+    var host = "http://www.chemspider.com";
+    var request = new XMLHttpRequest();
+    var resource = '/MassSpecAPI.asmx';
+    request.open('POST', host+resource, false);
+    request.setRequestHeader('Content-Type', 'application/soap+xml');
+
+    var range = 0.5;
+    var m = '';
+    for (var i=0; i<masses.length; i++){
+    m += '<MassRange><Mass>'+masses[i]+'</Mass>' +
+        '<Range>'+range+'</Range></MassRange>';
+    }
+
+    var payload =
+    '<?xml version="1.0" encoding="utf-8"?>\
+    <soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"\
+                     xmlns:xsd="http://www.w3.org/2001/XMLSchema"\
+                     xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">\
+        <soap12:Body>\
+            <SearchByMassArrayAsyncOrdered xmlns="http://www.chemspider.com/">\
+                <masses>'
+                    +m+
+                    '</masses>\
+                <orderBy>eMolecularWeight</orderBy>\
+                <orderDirection>eAscending</orderDirection>\
+                <token>'+token+'</token>\
+            </SearchByMassArrayAsyncOrdered>\
+        </soap12:Body>\
+    </soap12:Envelope>';
+
+    request.send(payload);
+    console.log(payload);
+
+    //do some DOM parsing to extract the RID
+    var parser = new DOMParser();
+    var xmlDoc = parser.parseFromString(request.responseText, 'text/xml');
+    var result = xmlDoc.getElementsByTagName('SearchByMassArrayAsyncOrderedResult')[0];
+    return result.firstChild.data;
+}
+</xmp></pre>
+
+<p>The above function encapsulates a list of masses in a large SOAP XMP payload within &lt;masses&gt; tags.  Arguments can also be added to order the result, such as by "eAscending" "eMolecularWeight".  One can filter the data based on the allowable mass range of matches they want to get back.  I originally thought this was an awesome mass spec fingerprint identifier, converting mass peaks one might get from a unknown spectrum, to chemical identifications with the same or similar profile. Accordingly, the list of  masses captured in the "masses" variable before calling the function consisted of the masses of main fragments from ethanol.  I was wrong, and got back ethanol as only one of the many compounds that match all the listed masses within a mass range of "0.5" g/mol.  As the function returns the RID of the search, we again need to parse and extract the result ID.  A Node.js analog of the DOM parser is used this time, parsing the XML from string and stringing the RID from the SearchByMassArrayAsyncOrderedResult tag.</p>
+
+<p>In order to get the ChemSpider identification of all these compounds, one must first convert their RID to the CSID, as in previous examples, using a homologous function, GetMassArrayAsyncSearchResult:</p>
+
+<pre><xmp>function ridToCSIDs(rid){
+    var host = "http://www.chemspider.com";
+    var request = new XMLHttpRequest();
+    var resource = '/MassSpecAPI.asmx/GetMassArrayAsyncSearchResult';
+    var payload = 'rid='+rid+'&token='+token;
+    request.open('POST', host+resource, false);
+    request.setRequestHeader('Content-Type',
+        'application/x-www-form-urlencoded');
+    request.send(payload);
+}
+</xmp></pre>
+
+<p>The final result: <a href="/masses?html=false">Masses</a> with CSID 682 (ethanol) in there.</p>
+

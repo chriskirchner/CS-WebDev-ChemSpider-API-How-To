@@ -1,75 +1,67 @@
 /**
- * Created by Xaz on 3/1/2016.
+ * Created by Xaz on 3/6/2016.
  */
-var XMLHttpRequest = require('xmlhttprequest').XMLHttpRequest;
-
-function CSRequest(query){
-    var host = 'http://www.chemspider.com';
-    var resource = '/MassSpecAPI.asmx';
-    var request = new XMLHttpRequest();
-    request.open('POST', host+resource, false);
-    request.setRequestHeader('Content-Type', 'application/soap+xml');
-    request.send(query);
-    console.log(request.responseText);
-    return request.responseText;
-}
-
-
-
-
-var databases = '<?xml version="1.0" encoding="utf-8"?>\
-<soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">\
-<soap12:Body>\
-<GetDatabases xmlns="http://www.chemspider.com/" />\
-</soap12:Body>\
-</soap12:Envelope>';
-//var sources = CSRequest(databases);
-
-var token = "0a4dc397-454a-4eb7-9767-3d63c6722f0c";
-var db1 = 'Cool Pharm';
-var formula =
-'<?xml version="1.0" encoding="utf-8"?> \
-<soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope"> \
-    <soap12:Body> \
-        <SearchByFormulaAsync xmlns="http://www.chemspider.com/"> \
-            <formula>CH3CH2OH</formula> \
-            <token>'+token+'</token> \
-        </SearchByFormulaAsync> \
-    </soap12:Body> \
-</soap12:Envelope>';
-var rid = CSRequest(formula);
-
-rid = 'b5b6f94e-922b-4a00-a644-cfcf8ecc9889';
-var sdf =
-    '<?xml version="1.0" encoding="utf-8"?>\
-<soap12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://www.w3.org/2003/05/soap-envelope">\
-  <soap12:Body>\
-    <GetRecordsSdf xmlns="http://www.chemspider.com/">\
-      <rid>'+rid+'</rid>\
-      <token>'+token+'</token>\
-    </GetRecordsSdf>\
-  </soap12:Body>\
-</soap12:Envelope>';
-var result = CSRequest(sdf);
-
-
 
 
 /*
-resource = '/MassSpecAPI.asmx/GetRecordsSdf';
-payload = 'rid=77460bc5-8f8c-40ae-abf1-8957901a6653' +
-    '&token='+appid;
-request.open('POST', host+resource, false);
-request.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-request.send(payload);
+ Author: Chris Kirchner
+ Organization: OSU
+ Class: CS290 Web Development
+ Assignment: How-To
+ Date: 06Mar16
+ Purpose: Guide for ChemSpider Web Services
+ */
 
-var text = request.responseText;
-text = text.replace(/&lt;/g, '<').replace(/&gt;/g,'>');
-console.log(text);
-*/
+//setup express and handlebars
+var express = require('express');
+var app = express();
+var handlebars = require('express-handlebars').create({
+    defaultLayout: 'main'
+});
 
+//indicate express engine
+app.engine('handlebars', handlebars.engine);
+app.set('view engine', 'handlebars');
+app.set('port', 3000);
 
+app.use(express.static('public'));
 
+//setup callback for GET request
+app.get('/', function(req, res){
+    context = {};
+    context.html = true;
+    res.render('intro', context);
+});
 
+app.get('/:name', function(req, res){
+    context = {};
+    if (req.query.html){
+        context.html = JSON.parse(req.query.html);
+    }
+    else {
+        context.html = true;
+    }
+    console.log(context);
+    res.render(req.params.name, context);
+});
 
+//setup callback for unavailable resource
+app.use(function(req, res){
+    res.status(404);
+    res.render('404');
+});
+
+//setup callback for errors
+app.use(function(err, req, res, next){
+    console.error(err.stack);
+    res.type('plain/text');
+    res.status(500);
+    res.render('500');
+});
+
+//listen on port
+app.listen(app.get('port'), function() {
+    console.log('Express started on http://localhost:'
+        + app.get('port') + '; press Ctrl-C to terminate.');
+});
 

@@ -1,0 +1,87 @@
+<h1>Comound Search using HTTP</h1>
+<h3>...or HTTP using You to Get it's Compounds</h3>
+
+<p>This section will gently introduce you to the concepts of ChemSpider's Web Services using methods in their <a href="http://www.chemspider.com/Search.asmx">Search API</a> for getting general compound information - anything from chemical properties to thumbnails of the structures.  The first operation we'll cover is the <a href="http://www.chemspider.com/Search.asmx?op=SimpleSearch">SimpleSearch</a>, being the gentlest.  The SimpleSearch uses pretty much any chemical identifier you can think of (e.g., name, SMILES, InChI) to pull information about the compound.  Pulling information happens through a list of intermediate proprietary identifiers, or CSIDs (ChemSpider IDs), that then point to ChemSpider's chemical information.  Chemspider's chemical information can then be pulled using the identifier CSIDs with other functions depending on the kind of information you are looking for.</p>
+
+<p>The SimpleSearch operation provides two main protocols to use - SOAP variants using HTTP POST with SOAP based XML, or HTTP GET and POST query methods utilizing the query string in URL for GET, or putting the query in the body under the x-www-form-urlencoded format for POST.  While the SOAP POST comes back with SOAP XML, the HTTP GET and POST methods come back with "regular" XML.  The <a href="http://www.chemspider.com/JSON.ashx">REST protocol</a> is also available for the SimpleSearch operation, providing results in JSON.  However, the adoption of REST in ChemSpider's sack of API protocols is seemingly immature given the few functions they provide, the indirection in getting to their REST protocols (via google, instead of their main Web Services page), and the fact that they can't even spell "integration" correctly in the first sentence of their REST API page.  Maybe they got to restful and sleepy?  But first, let's take a look at how to implement SimpleSearch using HTTP GET, using the security token we were given in the Profile Page after registration.</p>
+
+<p>We'll first abstract the XMLHttpRequest in a ChemSpider Request function called CSRequest, which accepts a JSON object as the argument to easily show the operation and options for educational purposes. The main search compound we will be using is 'Ethanol', the one compound that started civilization according to the <a href="http://www.nytimes.com/2013/03/17/opinion/sunday/how-beer-gave-us-civilization.html?_r=0">New York Times</a>.  Similarly, we will start ChemSpider operations with it.  CSRequest is shown below:</p>
+
+<pre><xmp>function CSRequest(query){
+    var host = 'http://www.chemspider.com';
+    var resource = '/Search.asmx/';
+    var request = new XMLHttpRequest();
+    var q = query.operation+'?';
+    for (var k in query.options){
+        q += k +'='+ query.options[k] +'&';
+    }
+    q = q.slice(0,-1);
+    console.log(q);
+    request.open('GET', host+resource+q, false);
+    request.send();
+    return request.responseText;
+}
+</xmp></pre>
+
+<p>CSRequest creates a HTTP Get request using the URL query string (e.g., http://www.chemspider.com/Search.asmx/SimpleSearch?query=Ethanol&token=0a4dc397-454a-4eb7-9767-3d63c6722f0c). To make a CSID search request for "Ethanol" and make the HTTP GET request using the URL query string, we can pass the following "query" JSON argument: </p>
+
+<pre><xmp>var query = {
+    'operation': 'SimpleSearch',
+    'options': {
+        'query': 'Ethanol',
+        'token': '0a4dc397-454a-4eb7-9767-3d63c6722f0c'
+    }
+};
+</xmp></pre>
+
+<p>The query object provides the SimpleSearch operation, using "Ethanol" as the query and our security token. The result is given:</p>
+
+<pre><xmp>
+<?xml version="1.0" encoding="utf-8"?>
+<ArrayOfInt xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns="http://www.chemspider.com/">
+    <int>682</int>
+    <int>682</int>
+</ArrayOfInt>
+</xmp></pre>
+
+<p>The list of CSIDs associated with your search are embedded in &lt;int&gt;...&lt;/int&gt; elements.  To extract the CSIDs from the XML, you can use regular expression, or build a DOM object with the xml for parsing, depending on your religious association. Oddly enough, the request shoots back two identical CSIDs for 'Ethanol'.  I guess they are just that doubly excited about the compound.  The CSID can then be used to extract compound specific information from ChemSpider, such as getting a thumbnail of the molecular structure.  Here we will use reqular expression to add the id to our next thumbnail request:</p>
+
+<pre><xmp>var thumbnail = {
+    'operation': 'GetCompoundThumbnail',
+    'options': {
+        'token': '0a4dc397-454a-4eb7-9767-3d63c6722f0c'
+    }
+};
+var re = /<int>(\d*)<\/int>/g;
+thumbnail.options['id'] = re.exec(xml)[1];
+</xmp></pre>
+
+<p>In case you are unfamiliar with regular expressions in JavaScript as I was, try this <a href="http://javascript.info/tutorial/regular-expressions-methods">Tutorial</a>.  I used it to pick it up along with this <a href="https://regex101.com/#javascript">Regex Helper</a> that was so insanely helpful, it actually makes one momentarily sane.  For multiple CSIDs (hopefully not multiples of the same CSID), just loop through each execution:
+
+<pre><xmp>while (res = re.exec(xml)){
+    console.log(res[1]);
+}
+</xmp></pre>
+
+<p>Now that we have the CSID built-in to our argument object, we can make the thumbnail request:</p>
+
+<pre><xmp>var binary = CSRequest(thumbnail);
+    var re = /<base64Binary .*>(.*)<\/base64Binary>/i;
+    var png = re.exec(binary)[1];
+    var pic = require('fs');
+    pic.writeFile('thumbnail.png',
+        png,
+        'base64',
+        function(err){
+        if(err){
+            console.log('Oops, someone already clipped their thumbnail!');
+        }
+    }
+);
+</xmp></pre>
+
+<p>Since the response for our thumbnail returns the thumbnail inside XML as base64 binary, we need to extract the binary thumbnail from XML using regular expressions again, allowing us to save the binary into a file and, voila, the resulting thumbnail: </p>
+
+<img src="/pics/EthanolThumbnail.png">
+
+<p>Semi-random fact: humans cannot properly metabolise alcohols with an odd number of carbons with out having severe deleterious effects and possibly dying (even 10 mL of methanol (has one carbon) will make you go blind).  Fortunately, humans can metabolise alcohols with even numbers of carbon, such as ethanol and even butanol, which the Russians started drinking when they ran out of fermented potato juice.  Like alcohols, ChemSpider also makes several different methods for getting the same effect, as shown on the next page.</p>
